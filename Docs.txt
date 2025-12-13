@@ -1,0 +1,140 @@
+To build VeryTask (The Hyper-Local Gig Economy) at an industrial level, you need to treat this not as a "crypto project" but as a fintech app that happens to use blockchain for settlement.
+
+Here is the professional execution plan, tech stack, and architectural roadmap.
+
+1. The Industrial Tech Stack
+We choose these tools for speed, scalability, and "hackathon winning" polish.
+
+Frontend (User Experience)
+Framework: Next.js (React).
+
+Why: Fast development, creates a high-performance Progressive Web App (PWA) that feels like a native mobile app.
+
+UI Library: Tailwind CSS + Shadcn/ui.
+
+Why: Clean, modern, accessible components out of the box. Looks professional immediately.
+
+Maps: Leaflet or Mapbox GL JS.
+
+Why: You need a visual map to show "Gigs Near Me."
+
+Wallet Integration: Wepin Widget SDK.
+
+Critical: This allows users to log in with Google/Apple (Social Login) and creates a wallet for them. This is your "Web3 made Human-Friendly" winning feature.
+
+Backend (The "Industrial" Logic)
+Server: Node.js with NestJS (or Express).
+
+Why: You need off-chain logic to handle location data (geo-hashing) quickly without spamming the blockchain.
+
+Database: Supabase (PostgreSQL).
+
+Why: It has built-in PostGIS extension. This is mandatory for efficiently querying "find all tasks within 2km of my coordinates."
+
+Storage: IPFS (via Pinata or Web3.Storage).
+
+Why: To store "Proof of Work" images (e.g., a photo of the mowed lawn or delivered package) in a decentralized way.
+
+Blockchain (The Trust Layer)
+Language: Solidity.
+
+Framework: Hardhat (standard, robust testing).
+
+Network: Very Chain Mainnet (Check their docs for the RPC URL and Chain ID).
+
+2. Core Architecture & Workflow
+The industrial edge comes from Hybrid Architecture: Fast off-chain discovery, secure on-chain settlement.
+
+Task Creation (Off-Chain + On-Chain):
+
+User posts a task: "Walk my dog, $10".
+
+On-Chain: Smart Contract accepts the $10 deposit (Escrow).
+
+Off-Chain: Backend indexes this task with (Latitude, Longitude) in Supabase PostGIS.
+
+Discovery (Off-Chain):
+
+Worker opens the app.
+
+App queries Backend: SELECT * FROM tasks WHERE ST_DWithin(location, user_location, 2000 meters).
+
+Result: Instant map loading (no slow blockchain reads).
+
+Agreement & Work (On-Chain):
+
+Worker clicks "Accept".
+
+Smart contract updates status to IN_PROGRESS.
+
+Completion & Payout (On-Chain):
+
+Worker uploads photo to IPFS -> submits hash to contract.
+
+Poster confirms -> Smart Contract releases funds to Worker + Mints a "Reputation Point" (SBT).
+
+3. Smart Contract Modules (What to Code)
+You need three specific contracts. Do not put everything in one file.
+
+A. TaskMarketplace.sol (The Core)
+Struct Task: { id, poster, worker, amount, status, ipfsProof }
+
+Functions:
+
+createTask(): Locks tokens (VERY or USDT) in the contract.
+
+assignTask(): Assigns a worker address.
+
+completeTask(): Worker submits proof.
+
+approveTask(): Poster releases funds.
+
+Dispute Logic: raiseDispute(): Freezes funds and calls the Tribunal contract.
+
+B. UserReputation.sol (The Soulbound Token)
+Standard: ERC-721 (Non-Transferable).
+
+Logic: Every time a task is successfully completed without dispute, the worker gets +1 XP.
+
+Industrial Polish: High XP users get a "Verified Pro" badge in the UI.
+
+C. AdManager.sol (The Hackathon "Bonus Points")
+Logic: This utilizes the AD VERY token mentioned in the prompt.
+
+Function: boostTask(taskId, amountAdVery).
+
+Effect: Users burn AD VERY tokens to make their task pin turn Gold on the map, ensuring it gets picked up faster.
+
+4. Development Roadmap (Speed Run)
+Phase 1: The Skeleton (Day 1-2)
+
+Set up Next.js repo and Supabase project.
+
+Wepin Integration: Get the "Login with Google" working first. If you can't get a wallet address from a Google login, the project fails.
+
+Deploy a dummy Hello World contract to Very Chain to test the RPC connection.
+
+Phase 2: The Logic (Day 3-5)
+
+Write TaskMarketplace.sol. Test it locally with Hardhat.
+
+Build the Backend API: POST /create-task (saves to DB) and GET /tasks (geo-query).
+
+Connect the Frontend form to the Contract (using Wepin provider).
+
+Phase 3: The Polish (Day 6-7)
+
+Map UI: Add custom markers. (Green = Open, Red = Taken, Gold = Boosted).
+
+Notifications: Fake "Push Notifications" using a Toast library (e.g., sonner) when a task is accepted.
+
+AD VERY Integration: Add a toggle "Boost this task using AD VERY" in the creation form.
+
+5. "Winning Factors" Checklist
+To ensure this looks industrial and not amateur:
+
+Error Handling: If the user has 0 gas, show a helpful "Top Up" modal, not a raw JSON error.
+
+Empty States: Don't show a blank white screen if there are no tasks. Show a graphic saying "No gigs nearby, be the first to post one!"
+
+The Pitch Hook: In your demo, emphasize Privacy. "We store locations off-chain in a secure database, so your home address isn't permanently doxed on the blockchain. Only the financial transaction is public." This shows maturity.
