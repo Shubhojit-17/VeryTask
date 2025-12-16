@@ -3,7 +3,8 @@
  * Usage: npx hardhat run scripts/show-deployer.ts --network very_mainnet
  */
 
-import { ethers } from "hardhat";
+import hre from "hardhat";
+const { ethers } = hre;
 
 async function main(): Promise<void> {
   const [deployer] = await ethers.getSigners();

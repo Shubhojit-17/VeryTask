@@ -175,19 +175,15 @@ export default function WepinAuth({
         // Store in localStorage for persistence
         localStorage.setItem("verytask_address", account.address);
         
-        // Create provider and call onConnect
-        const provider = await sdk.getProvider({ network: "verychain" }).catch(() => null);
-        if (provider && onConnect) {
+        // Create provider from RPC (Wepin SDK doesn't expose getProvider directly)
+        if (onConnect) {
           try {
-            const browserProvider = new BrowserProvider(provider);
-            onConnect(account.address, browserProvider);
-            console.log("[WepinAuth] Session restored for:", account.address);
-          } catch (e) {
-            console.warn("[WepinAuth] Provider creation failed, using RPC fallback");
-            // Fallback: create provider from RPC
             const { JsonRpcProvider } = await import("ethers");
             const rpcProvider = new JsonRpcProvider(VERY_CHAIN_CONFIG.rpcUrl);
             onConnect(account.address, rpcProvider as any);
+            console.log("[WepinAuth] Session restored for:", account.address);
+          } catch (e) {
+            console.warn("[WepinAuth] Provider creation failed:", e);
           }
         }
       }
@@ -229,20 +225,15 @@ export default function WepinAuth({
           // Store in localStorage for persistence
           localStorage.setItem("verytask_address", account.address);
           
-          // Create provider and call onConnect
-          try {
-            const provider = await wepinSdk.getProvider({ network: "verychain" }).catch(() => null);
-            if (provider && onConnect) {
-              const browserProvider = new BrowserProvider(provider);
-              onConnect(account.address, browserProvider);
-            } else if (onConnect) {
-              // Fallback: create provider from RPC
+          // Create provider from RPC (Wepin SDK doesn't expose getProvider directly)
+          if (onConnect) {
+            try {
               const { JsonRpcProvider } = await import("ethers");
               const rpcProvider = new JsonRpcProvider(VERY_CHAIN_CONFIG.rpcUrl);
               onConnect(account.address, rpcProvider as any);
+            } catch (e) {
+              console.warn("[WepinAuth] Provider creation failed:", e);
             }
-          } catch (e) {
-            console.warn("[WepinAuth] Provider creation failed:", e);
           }
 
           console.log("[WepinAuth] Logged in:", account.address);

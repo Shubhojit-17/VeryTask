@@ -13,7 +13,8 @@
  *   4. Link contracts together
  */
 
-import { ethers } from "hardhat";
+import hre from "hardhat";
+const { ethers } = hre;
 
 async function main(): Promise<{
   mockAdVery: string;

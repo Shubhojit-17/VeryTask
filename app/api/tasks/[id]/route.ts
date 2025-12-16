@@ -54,6 +54,10 @@ export async function PATCH(
       is_boosted,
       ipfs_proof_hash,
       tx_hash,
+      title,
+      description,
+      category,
+      payment_status,
     } = body;
 
     // Build update object
@@ -62,14 +66,21 @@ export async function PATCH(
     };
 
     if (status) updates.status = status;
-    if (worker_address) updates.worker_address = worker_address.toLowerCase();
+    if (worker_address !== undefined) {
+      updates.worker_address = worker_address ? worker_address.toLowerCase() : null;
+    }
     if (is_boosted !== undefined) {
       updates.is_boosted = is_boosted;
       if (is_boosted) updates.boosted_at = new Date().toISOString();
     }
     if (ipfs_proof_hash) updates.ipfs_proof_hash = ipfs_proof_hash;
     if (tx_hash) updates.tx_hash = tx_hash;
+    if (title) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (category) updates.category = category;
+    if (payment_status) updates.payment_status = payment_status;
     if (status === "completed") updates.completed_at = new Date().toISOString();
+    if (status === "in_progress") updates.payment_status = "escrowed";
 
     const { data: task, error } = await supabase
       .from("tasks")
@@ -87,6 +98,54 @@ export async function PATCH(
     }
 
     return NextResponse.json({ task, success: true });
+
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// DELETE - Delete task
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    // First check if the task exists and is in "open" status
+    const { data: existingTask, error: fetchError } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !existingTask) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    // Only allow deletion of tasks that are still "open" (no worker assigned)
+    if (existingTask.status !== "open") {
+      return NextResponse.json(
+        { error: "Cannot delete task that is already in progress or completed" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Supabase delete error:", error);
+      return NextResponse.json(
+        { error: "Failed to delete task" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: "Task deleted successfully" });
 
   } catch (error) {
     console.error("API error:", error);

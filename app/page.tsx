@@ -58,14 +58,18 @@ interface UserLocation {
 }
 
 // ============================================================
-// Contract ABIs (Minimal for demo)
+// Contract ABIs
 // ============================================================
 
 const TASK_MARKETPLACE_ABI = [
   "function createTask(uint256 deadline) external payable returns (uint256)",
   "function assignWorker(uint256 taskId) external",
+  "function submitWork(uint256 taskId, string calldata ipfsProof) external",
+  "function approveAndPay(uint256 taskId) external",
+  "function raiseDispute(uint256 taskId) external",
   "function boostTask(uint256 taskId) external",
   "function getTask(uint256 taskId) external view returns (tuple(uint256 id, address poster, address worker, uint256 amount, uint8 status, bool isDisputed, string ipfsProof, uint256 createdAt, uint256 deadline, bool isBoosted))",
+  "function taskCounter() external view returns (uint256)",
   "event TaskCreated(uint256 indexed taskId, address indexed poster, uint256 amount, uint256 deadline)",
   "event TaskBoosted(uint256 indexed taskId, address indexed booster, uint256 adVeryBurned)",
 ];
@@ -89,306 +93,8 @@ const CONTRACT_ADDRESSES = {
 };
 
 // ============================================================
-// Demo Mode Configuration
+// Task Categories
 // ============================================================
-
-const DEMO_MODE = true; // Set to true for demo, false for production
-
-// Demo wallet address (simulated)
-const DEMO_WALLET_ADDRESS = "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD73";
-
-// Demo tasks data
-const DEMO_TASKS: Task[] = [
-  {
-    id: 1,
-    title: "Walk my Golden Retriever",
-    description: "Need someone to walk my friendly Golden Retriever for 30 minutes around Central Park. He's very well-behaved and loves treats!",
-    amount: "15",
-    category: "pet_care",
-    distance: 450,
-    status: "open",
-    paymentStatus: "escrowed",
-    isBoosted: true,
-    poster: "0x8F3a...B2c1",
-    posterAddress: "0x8f3a5e9d2c1b4a7f6e0d3c2b1a9f8e7d6c5b4a3b2c1",
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 2,
-    title: "Grocery Delivery from Whole Foods",
-    description: "Pick up my grocery order from Whole Foods on 5th Ave and deliver to my apartment. About 4-5 bags, nothing too heavy.",
-    amount: "25",
-    category: "delivery",
-    distance: 800,
-    status: "open",
-    paymentStatus: "escrowed",
-    isBoosted: false,
-    poster: "0x1A2b...C3d4",
-    posterAddress: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c3d4",
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 3,
-    title: "Fix leaky kitchen faucet",
-    description: "My kitchen faucet has been dripping constantly. Need a handyman to fix or replace it. I have a replacement faucet already.",
-    amount: "50",
-    category: "handyman",
-    distance: 1200,
-    status: "open",
-    paymentStatus: "escrowed",
-    isBoosted: false,
-    poster: "0x9E8f...D7e6",
-    posterAddress: "0x9e8f7d6c5b4a3c2d1e0f9a8b7c6d5e4f3a2b1c0d7e6",
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 4,
-    title: "Deep clean 2BR apartment",
-    description: "Moving out next week and need a thorough deep cleaning of my 2-bedroom apartment. Kitchen, bathrooms, floors, windows.",
-    amount: "120",
-    category: "cleaning",
-    distance: 2100,
-    status: "in_progress",
-    paymentStatus: "escrowed",
-    isBoosted: false,
-    poster: "0x5C4d...A3b2",
-    posterAddress: "0x5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6a3b2",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 5,
-    title: "Pick up dry cleaning",
-    description: "Collect my dry cleaning order (3 suits, 5 shirts) from Lee's Cleaners on Madison Ave and drop off at my office building lobby.",
-    amount: "18",
-    category: "errands",
-    distance: 650,
-    status: "open",
-    paymentStatus: "escrowed",
-    isBoosted: false,
-    poster: "0x3B2a...E1d0",
-    posterAddress: "0x3b2a1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4e1d0",
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 6,
-    title: "Mow lawn and trim hedges",
-    description: "Need lawn mowed and hedges trimmed for my front and back yard. Equipment provided. About 2 hours of work.",
-    amount: "75",
-    category: "yard_work",
-    distance: 3500,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x7F6e...B5a4",
-    posterAddress: "0x7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8b5a4",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0x123abc456def789ghi012jkl345mno678pqr901stu234vwx567yz890abc123def",
-  },
-  // Additional completed tasks for work history (12 total completed)
-  {
-    id: 7,
-    title: "Deliver birthday cake",
-    description: "Pick up a custom birthday cake from Sweet Dreams Bakery and deliver to a birthday party venue.",
-    amount: "20",
-    category: "delivery",
-    distance: 1500,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x4D3c...F2e1",
-    posterAddress: "0x4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5f2e1",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xabc123def456ghi789jkl012mno345pqr678stu901vwx234yz567abc890def123",
-  },
-  {
-    id: 8,
-    title: "Assemble IKEA furniture",
-    description: "Assemble a PAX wardrobe and MALM dresser. All parts and tools provided.",
-    amount: "85",
-    category: "handyman",
-    distance: 2200,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x2E1d...G4f3",
-    posterAddress: "0x2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3g4f3",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xdef456ghi789jkl012mno345pqr678stu901vwx234yz567abc890abc123def456",
-  },
-  {
-    id: 9,
-    title: "Walk 3 dogs for a week",
-    description: "Daily dog walking service for 3 small dogs while owner is on vacation.",
-    amount: "150",
-    category: "pet_care",
-    distance: 800,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x6H5g...I8j7",
-    posterAddress: "0x6h5g4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7i8j7",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xghi789jkl012mno345pqr678stu901vwx234yz567abc890def123abc456def789",
-  },
-  {
-    id: 10,
-    title: "Post-party cleanup",
-    description: "Clean up after a house party. General cleaning, trash removal, dishes.",
-    amount: "60",
-    category: "cleaning",
-    distance: 1100,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x8K7j...L0m9",
-    posterAddress: "0x8k7j6i5h4g3f2e1d0c9b8a7f6e5d4c3b2a1f0e9l0m9",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xjkl012mno345pqr678stu901vwx234yz567abc890def123ghi456abc789def012",
-  },
-  {
-    id: 11,
-    title: "Grocery shopping for elderly neighbor",
-    description: "Weekly grocery shopping for an elderly neighbor. List provided, about 20 items.",
-    amount: "30",
-    category: "errands",
-    distance: 400,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x0N9m...P2q1",
-    posterAddress: "0x0n9m8l7k6j5i4h3g2f1e0d9c8b7a6f5e4d3c2b1p2q1",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xmno345pqr678stu901vwx234yz567abc890def123ghi456jkl789abc012def345",
-  },
-  {
-    id: 12,
-    title: "Paint garden fence",
-    description: "Paint a 50ft wooden garden fence. Paint and brushes provided.",
-    amount: "100",
-    category: "yard_work",
-    distance: 2800,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x2R1q...T4s3",
-    posterAddress: "0x2r1q0p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4t4s3",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xpqr678stu901vwx234yz567abc890def123ghi456jkl789mno012abc345def678",
-  },
-  {
-    id: 13,
-    title: "Airport pickup",
-    description: "Pick up a guest from JFK airport and drive to Manhattan hotel.",
-    amount: "45",
-    category: "delivery",
-    distance: 3200,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x4U3t...V6w5",
-    posterAddress: "0x4u3t2s1r0q9p8o7n6m5l4k3j2i1h0g9f8e7d6v6w5",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xstu901vwx234yz567abc890def123ghi456jkl789mno012pqr345abc678def901",
-  },
-  {
-    id: 14,
-    title: "Install ceiling fan",
-    description: "Replace old light fixture with a new ceiling fan. Fan purchased, just need installation.",
-    amount: "70",
-    category: "handyman",
-    distance: 1800,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x6X5w...Y8z7",
-    posterAddress: "0x6x5w4v3u2t1s0r9q8p7o6n5m4l3k2j1i0h9g8y8z7",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xvwx234yz567abc890def123ghi456jkl789mno012pqr345stu678abc901def234",
-  },
-  {
-    id: 15,
-    title: "Pet sit for weekend",
-    description: "Look after 2 cats and a hamster for the weekend. Feeding, litter, and some playtime.",
-    amount: "80",
-    category: "pet_care",
-    distance: 950,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x8A7z...B0c9",
-    posterAddress: "0x8a7z6y5x4w3v2u1t0s9r8q7p6o5n4m3l2k1j0b0c9",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 19 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xyz567abc890def123ghi456jkl789mno012pqr345stu678vwx901abc234def567",
-  },
-  {
-    id: 16,
-    title: "Office deep clean",
-    description: "Deep clean a small home office. Desk, shelves, windows, carpet vacuuming.",
-    amount: "40",
-    category: "cleaning",
-    distance: 600,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x0D9c...E2f1",
-    posterAddress: "0x0d9c8b7a6z5y4x3w2v1u0t9s8r7q6p5o4n3m2e2f1",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xabc890def123ghi456jkl789mno012pqr345stu678vwx901yz234abc567def890",
-  },
-  {
-    id: 17,
-    title: "Return online orders",
-    description: "Return 5 packages to various locations (UPS, FedEx, USPS). All labels printed.",
-    amount: "25",
-    category: "errands",
-    distance: 1400,
-    status: "completed",
-    paymentStatus: "released",
-    isBoosted: false,
-    poster: "0x2G1f...H4i3",
-    posterAddress: "0x2g1f0e9d8c7b6a5z4y3x2w1v0u9t8s7r6q5p4h4i3",
-    workerAddress: DEMO_WALLET_ADDRESS.toLowerCase(),
-    worker: "0x742d...bD73",
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString(),
-    txHash: "0xdef123ghi456jkl789mno012pqr345stu678vwx901yz234abc567890def123ghi",
-  },
-];
 
 const CATEGORIES = [
   { id: "all", label: "All Tasks", icon: "🏠" },
@@ -417,17 +123,19 @@ export default function Dashboard() {
   
   const [provider, setProvider] = useState<BrowserProvider | null>(null);
   const [userAddress, setUserAddress] = useState<string | null>(null);
-  const [tasks, setTasks] = useState<Task[]>(DEMO_MODE ? DEMO_TASKS : []);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [myCreatedTasks, setMyCreatedTasks] = useState<Task[]>([]);
   const [myWorkHistory, setMyWorkHistory] = useState<Task[]>([]);
   const [myPendingTasks, setMyPendingTasks] = useState<Task[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [activeTaskView, setActiveTaskView] = useState<"nearby" | "created" | "history" | "pending">("nearby");
+  const [activeTaskView, setActiveTaskView] = useState<"nearby" | "history" | "pending">("nearby");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [adVeryBalance, setAdVeryBalance] = useState<string>(DEMO_MODE ? "500" : "0");
+  const [adVeryBalance, setAdVeryBalance] = useState<string>("0");
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingTasks, setIsFetchingTasks] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -441,13 +149,20 @@ export default function Dashboard() {
   const initialFetchDone = useRef(false);
   
   // Completed tasks count (fetched from API)
-  const [completedCount, setCompletedCount] = useState<number>(DEMO_MODE ? 12 : 0);
+  const [completedCount, setCompletedCount] = useState<number>(0);
   
-  // Demo mode: next task ID counter
-  const nextTaskId = useRef(DEMO_MODE ? 100 : 1);
+  // Task ID counter for new tasks
+  const nextTaskId = useRef(1);
 
   // Form state
   const [createForm, setCreateForm] = useState<CreateTaskForm>({
+    title: "",
+    description: "",
+    amount: "",
+    category: "delivery",
+  });
+
+  const [editForm, setEditForm] = useState<CreateTaskForm>({
     title: "",
     description: "",
     amount: "",
@@ -465,13 +180,7 @@ export default function Dashboard() {
     // Store in localStorage for My Tasks pages
     localStorage.setItem("verytask_address", address);
     
-    // In demo mode, use simulated balance
-    if (DEMO_MODE) {
-      setAdVeryBalance("500");
-      return;
-    }
-    
-    // Fetch AD VERY balance
+    // Fetch AD VERY balance from blockchain
     try {
       if (CONTRACT_ADDRESSES.mockAdVery !== "0x0000000000000000000000000000000000000000") {
         const contract = new Contract(CONTRACT_ADDRESSES.mockAdVery, MOCK_AD_VERY_ABI, browserProvider);
@@ -486,7 +195,7 @@ export default function Dashboard() {
   const handleDisconnect = useCallback(() => {
     setUserAddress(null);
     setProvider(null);
-    setAdVeryBalance(DEMO_MODE ? "500" : "0");
+    setAdVeryBalance("0");
     localStorage.removeItem("verytask_address");
     
     // Reset all task states
@@ -504,23 +213,9 @@ export default function Dashboard() {
     const storedAddress = localStorage.getItem("verytask_address");
     if (storedAddress && !userAddress) {
       setUserAddress(storedAddress);
-      if (DEMO_MODE) {
-        setAdVeryBalance("500");
-      }
       console.log("[VeryTask] Restored wallet from localStorage:", storedAddress);
     }
   }, [userAddress]);
-
-  // ========================================
-  // Demo Mode: Connect with demo wallet
-  // ========================================
-  
-  const handleDemoConnect = useCallback(() => {
-    setUserAddress(DEMO_WALLET_ADDRESS);
-    setAdVeryBalance("500");
-    localStorage.setItem("verytask_address", DEMO_WALLET_ADDRESS);
-    showNotification("success", "Connected with demo wallet!");
-  }, []);
 
   // ========================================
   // Get User Location (Geolocation API)
@@ -556,20 +251,11 @@ export default function Dashboard() {
   }, []);
 
   // ========================================
-  // Fetch Tasks from Supabase (or Demo Data)
+  // Fetch Tasks from Supabase
   // ========================================
   
   const fetchTasks = useCallback(async (category?: string) => {
     if (!userLocation) return;
-
-    // Demo mode: Don't refetch, tasks are managed locally
-    if (DEMO_MODE) {
-      // Only set initial fetch done flag
-      if (!initialFetchDone.current) {
-        initialFetchDone.current = true;
-      }
-      return;
-    }
 
     setIsFetchingTasks(true);
 
@@ -624,7 +310,7 @@ export default function Dashboard() {
       setIsFetchingTasks(false);
       initialFetchDone.current = true;
     }
-  }, [userLocation, searchRadius, selectedCategory, tasks]);
+  }, [userLocation, searchRadius, selectedCategory]);
 
   // ========================================
   // Fetch User's Created Tasks
@@ -632,13 +318,6 @@ export default function Dashboard() {
   
   const fetchMyCreatedTasks = useCallback(async () => {
     if (!userAddress) return;
-    
-    // Demo mode: filter tasks by poster
-    if (DEMO_MODE) {
-      const myTasks = tasks.filter(t => t.posterAddress === userAddress.toLowerCase());
-      setMyCreatedTasks(myTasks);
-      return;
-    }
     
     try {
       const res = await fetch(`/api/tasks?poster=${userAddress}`);
@@ -669,7 +348,7 @@ export default function Dashboard() {
     } catch (error) {
       console.error("[VeryTask] Failed to fetch created tasks:", error);
     }
-  }, [userAddress, tasks]);
+  }, [userAddress]);
 
   // ========================================
   // Fetch User's Work History
@@ -677,13 +356,6 @@ export default function Dashboard() {
   
   const fetchMyWorkHistory = useCallback(async () => {
     if (!userAddress) return;
-    
-    // Demo mode: filter tasks by worker
-    if (DEMO_MODE) {
-      const myWork = tasks.filter(t => t.workerAddress === userAddress.toLowerCase());
-      setMyWorkHistory(myWork);
-      return;
-    }
     
     try {
       const res = await fetch(`/api/tasks?worker=${userAddress}`);
@@ -714,7 +386,7 @@ export default function Dashboard() {
     } catch (error) {
       console.error("[VeryTask] Failed to fetch work history:", error);
     }
-  }, [userAddress, tasks]);
+  }, [userAddress]);
 
   // ========================================
   // Fetch User's Pending Tasks (In Progress)
@@ -722,16 +394,6 @@ export default function Dashboard() {
   
   const fetchMyPendingTasks = useCallback(async () => {
     if (!userAddress) return;
-    
-    // Demo mode: filter tasks by worker where status is in_progress or submitted
-    if (DEMO_MODE) {
-      const myPending = tasks.filter(t => 
-        t.workerAddress === userAddress.toLowerCase() && 
-        (t.status === "in_progress" || t.status === "submitted")
-      );
-      setMyPendingTasks(myPending);
-      return;
-    }
     
     try {
       const res = await fetch(`/api/tasks?worker=${userAddress}&status=pending`);
@@ -764,7 +426,7 @@ export default function Dashboard() {
     } catch (error) {
       console.error("[VeryTask] Failed to fetch pending tasks:", error);
     }
-  }, [userAddress, tasks]);
+  }, [userAddress]);
 
   // Fetch user's tasks when address changes or tab changes
   useEffect(() => {
@@ -813,35 +475,6 @@ export default function Dashboard() {
     }
 
     setIsLoading(true);
-
-    // Demo mode: Add task to local state
-    if (DEMO_MODE) {
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate transaction time
-      
-      const newTask: Task = {
-        id: nextTaskId.current++,
-        title: createForm.title,
-        description: createForm.description,
-        amount: createForm.amount,
-        category: createForm.category,
-        distance: Math.floor(Math.random() * 2000) + 100,
-        status: "open",
-        paymentStatus: "escrowed",
-        isBoosted: false,
-        poster: `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`,
-        posterAddress: userAddress.toLowerCase(),
-        createdAt: new Date().toISOString(),
-        txHash: `0x${Math.random().toString(16).slice(2)}${Math.random().toString(16).slice(2)}`,
-      };
-      
-      setTasks(prev => [newTask, ...prev]);
-      setMyCreatedTasks(prev => [newTask, ...prev]);
-      showNotification("success", "Task created successfully!");
-      setIsCreateModalOpen(false);
-      setCreateForm({ title: "", description: "", amount: "", category: "delivery" });
-      setIsLoading(false);
-      return;
-    }
 
     try {
       const signer = await provider!.getSigner();
@@ -932,20 +565,6 @@ export default function Dashboard() {
 
     setIsLoading(true);
 
-    // Demo mode: Update task in local state
-    if (DEMO_MODE) {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate transaction
-      
-      setTasks(prev => prev.map(t => 
-        t.id === selectedTask.id ? { ...t, isBoosted: true } : t
-      ));
-      setAdVeryBalance(prev => (parseFloat(prev) - 100).toString());
-      showNotification("success", "Task boosted! It will now appear at the top of search results. (Demo Mode)");
-      setIsBoostModalOpen(false);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const signer = await provider!.getSigner();
       
@@ -1010,15 +629,6 @@ export default function Dashboard() {
 
     setIsLoading(true);
 
-    // Demo mode: Add tokens to balance
-    if (DEMO_MODE) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setAdVeryBalance(prev => (parseFloat(prev) + 100).toString());
-      showNotification("success", "Claimed 100 AD VERY tokens! (Demo Mode)");
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const signer = await provider!.getSigner();
       const contract = new Contract(CONTRACT_ADDRESSES.mockAdVery, MOCK_AD_VERY_ABI, signer);
@@ -1046,100 +656,280 @@ export default function Dashboard() {
   };
 
   // ========================================
-  // Accept Task Handler (Demo Mode)
+  // Accept Task Handler
   // ========================================
   
   const handleAcceptTask = async (task: Task) => {
-    if (!userAddress) {
+    if (!userAddress || !provider) {
       showNotification("error", "Please connect your wallet first");
       return;
     }
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate transaction
+    
+    try {
+      const signer = await provider.getSigner();
+      const contract = new Contract(CONTRACT_ADDRESSES.taskMarketplace, TASK_MARKETPLACE_ABI, signer);
 
-    const updatedTask = { 
-      ...task, 
-      status: "in_progress" as const, 
-      workerAddress: userAddress.toLowerCase(),
-      worker: `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`
-    };
+      // Call assignWorker on the contract
+      const tx = await contract.assignWorker(task.id);
+      showNotification("success", "Transaction submitted! Waiting for confirmation...");
+      await tx.wait();
 
-    setTasks(prev => prev.map(t => t.id === task.id ? updatedTask : t));
-    setMyPendingTasks(prev => [updatedTask, ...prev]);
+      // Update Supabase with status and payment_status = escrowed
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "in_progress",
+          worker_address: userAddress,
+          payment_status: "escrowed",
+        }),
+      });
 
-    showNotification("success", "Task accepted! You can now start working on it.");
-    setIsTaskDetailOpen(false);
-    setIsLoading(false);
+      showNotification("success", `Task accepted! ${task.amount} VERY is now held in escrow until you complete the work.`);
+      setIsTaskDetailOpen(false);
+      
+      // Refresh tasks
+      await fetchTasks();
+      await fetchMyPendingTasks();
+      
+    } catch (error: any) {
+      console.error("Accept task failed:", error);
+      if (error.code === "ACTION_REJECTED") {
+        showNotification("error", "Transaction rejected by user");
+      } else {
+        showNotification("error", "Failed to accept task. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ========================================
-  // Cancel Task Handler (Demo Mode)
+  // Cancel Task Handler
   // ========================================
   
   const handleCancelTask = async (task: Task) => {
-    if (!userAddress) return;
+    if (!userAddress || !provider) return;
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate transaction
+    
+    try {
+      // Update Supabase to reset task status
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "open",
+          worker_address: null,
+        }),
+      });
 
-    const updatedTask = { 
-      ...task, 
-      status: "open" as const, 
-      workerAddress: undefined,
-      worker: undefined
-    };
-
-    setTasks(prev => prev.map(t => t.id === task.id ? updatedTask : t));
-    setMyPendingTasks(prev => prev.filter(t => t.id !== task.id));
-
-    showNotification("success", "Task cancelled. It's now available for other workers.");
-    setIsTaskDetailOpen(false);
-    setIsLoading(false);
+      showNotification("success", "Task cancelled. It's now available for other workers.");
+      setIsTaskDetailOpen(false);
+      
+      // Refresh tasks
+      await fetchTasks();
+      await fetchMyPendingTasks();
+      
+    } catch (error: any) {
+      console.error("Cancel task failed:", error);
+      showNotification("error", "Failed to cancel task. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ========================================
-  // Submit Work Handler (Demo Mode)
+  // Edit Task Handler
+  // ========================================
+  
+  const openEditModal = (task: Task) => {
+    setSelectedTask(task);
+    setEditForm({
+      title: task.title,
+      description: task.description,
+      amount: task.amount,
+      category: task.category,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditTask = async () => {
+    if (!selectedTask || !userAddress) {
+      showNotification("error", "Please connect your wallet");
+      return;
+    }
+
+    if (!editForm.title) {
+      showNotification("error", "Task title is required");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`/api/tasks/${selectedTask.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editForm.title,
+          description: editForm.description,
+          category: editForm.category,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update task");
+      }
+
+      showNotification("success", "Task updated successfully!");
+      setIsEditModalOpen(false);
+      setEditForm({ title: "", description: "", amount: "", category: "delivery" });
+
+      // Refresh tasks
+      await fetchTasks();
+      await fetchMyCreatedTasks();
+
+    } catch (error: any) {
+      console.error("Edit task failed:", error);
+      showNotification("error", "Failed to update task. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ========================================
+  // Delete Task Handler
+  // ========================================
+  
+  const openDeleteConfirm = (task: Task) => {
+    setSelectedTask(task);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!selectedTask || !userAddress) {
+      showNotification("error", "Please connect your wallet");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`/api/tasks/${selectedTask.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete task");
+      }
+
+      showNotification("success", "Task deleted successfully!");
+      setIsDeleteConfirmOpen(false);
+      setSelectedTask(null);
+
+      // Refresh tasks
+      await fetchTasks();
+      await fetchMyCreatedTasks();
+
+    } catch (error: any) {
+      console.error("Delete task failed:", error);
+      showNotification("error", "Failed to delete task. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ========================================
+  // Submit Work Handler
   // ========================================
   
   const handleSubmitWork = async (task: Task) => {
-    if (!userAddress) return;
+    if (!userAddress || !provider) return;
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate transaction
+    
+    try {
+      const signer = await provider.getSigner();
+      const contract = new Contract(CONTRACT_ADDRESSES.taskMarketplace, TASK_MARKETPLACE_ABI, signer);
 
-    setTasks(prev => prev.map(t => 
-      t.id === task.id ? { ...t, status: "submitted" as const } : t
-    ));
+      // For now, we'll submit with an empty proof - can be enhanced with IPFS later
+      const tx = await contract.submitWork(task.id, "");
+      showNotification("success", "Transaction submitted! Waiting for confirmation...");
+      await tx.wait();
 
-    showNotification("success", "Work submitted! Waiting for poster approval.");
-    setIsTaskDetailOpen(false);
-    setIsLoading(false);
+      // Update Supabase
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "submitted" }),
+      });
+
+      showNotification("success", "Work submitted! Waiting for poster approval.");
+      setIsTaskDetailOpen(false);
+      
+      // Refresh tasks
+      await fetchTasks();
+      await fetchMyPendingTasks();
+      
+    } catch (error: any) {
+      console.error("Submit work failed:", error);
+      if (error.code === "ACTION_REJECTED") {
+        showNotification("error", "Transaction rejected by user");
+      } else {
+        showNotification("error", "Failed to submit work. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ========================================
-  // Approve & Release Payment Handler (Demo Mode)
+  // Approve & Release Payment Handler
   // ========================================
   
   const handleApproveTask = async (task: Task) => {
-    if (!userAddress) return;
+    if (!userAddress || !provider) return;
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate transaction
+    
+    try {
+      const signer = await provider.getSigner();
+      const contract = new Contract(CONTRACT_ADDRESSES.taskMarketplace, TASK_MARKETPLACE_ABI, signer);
 
-    setTasks(prev => prev.map(t => 
-      t.id === task.id ? { 
-        ...t, 
-        status: "completed" as const, 
-        paymentStatus: "released" as const,
-        completedAt: new Date().toISOString()
-      } : t
-    ));
-    setCompletedCount(prev => prev + 1);
+      // Call approveAndPay on the contract to release funds
+      const tx = await contract.approveAndPay(task.id);
+      showNotification("success", "Transaction submitted! Releasing payment...");
+      await tx.wait();
 
-    showNotification("success", "Task approved! Payment released to worker.");
-    setIsTaskDetailOpen(false);
-    setIsLoading(false);
+      // Update Supabase
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          status: "completed",
+        }),
+      });
+
+      showNotification("success", "Task approved! Payment released to worker.");
+      setIsTaskDetailOpen(false);
+      
+      // Refresh tasks
+      await fetchTasks();
+      await fetchMyCreatedTasks();
+      
+    } catch (error: any) {
+      console.error("Approve task failed:", error);
+      if (error.code === "ACTION_REJECTED") {
+        showNotification("error", "Transaction rejected by user");
+      } else {
+        showNotification("error", "Failed to approve task. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ========================================
@@ -1248,50 +1038,11 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Demo Mode: Simple Connect Button */}
-            {DEMO_MODE ? (
-              userAddress ? (
-                <div className="flex items-center gap-3">
-                  <button
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white font-medium shadow-lg shadow-indigo-500/25"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    <span className="hidden sm:inline">{userAddress.slice(0, 6)}...{userAddress.slice(-4)}</span>
-                    <span className="sm:hidden">Wallet</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setUserAddress(null);
-                      localStorage.removeItem("verytask_address");
-                    }}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-all"
-                    title="Disconnect"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleDemoConnect}
-                  className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl text-white font-semibold shadow-lg shadow-indigo-500/25 transition-all duration-300 hover:scale-105"
-                >
-                  <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <span>Connect Wallet</span>
-                </button>
-              )
-            ) : (
-              /* Production Mode: Wepin Auth Button */
-              <WepinAuth 
-                onConnect={handleConnect}
-                onDisconnect={handleDisconnect}
-              />
-            )}
+            {/* Wepin Auth Button */}
+            <WepinAuth 
+              onConnect={handleConnect}
+              onDisconnect={handleDisconnect}
+            />
           </div>
         </div>
       </header>
@@ -1345,24 +1096,6 @@ export default function Dashboard() {
               My Tasks
             </h3>
             <ul className="space-y-1">
-              <li>
-                <button
-                  onClick={() => setActiveTaskView("created")}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                    activeTaskView === "created" 
-                      ? "bg-indigo-500/20 text-indigo-300" 
-                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                  }`}
-                >
-                  <span className="text-lg">📝</span>
-                  <span className="font-medium">Tasks Created</span>
-                  {myCreatedTasks.length > 0 && (
-                    <span className="ml-auto px-2 py-0.5 bg-slate-700 text-slate-300 text-xs rounded-full">
-                      {myCreatedTasks.length}
-                    </span>
-                  )}
-                </button>
-              </li>
               <li>
                 <button
                   onClick={() => setActiveTaskView("pending")}
@@ -1532,18 +1265,7 @@ export default function Dashboard() {
               }`}
             >
               📍 Nearby Tasks
-              <span className="ml-2 text-xs opacity-75">({sortedTasks.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveTaskView("created")}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                activeTaskView === "created"
-                  ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              📝 Tasks Created
-              <span className="ml-2 text-xs opacity-75">({myCreatedTasks.length})</span>
+              <span className="ml-2 text-xs opacity-75">({sortedTasks.length + myCreatedTasks.length})</span>
             </button>
             <button
               onClick={() => setActiveTaskView("pending")}
@@ -1573,14 +1295,12 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">
               {activeTaskView === "nearby" && "Nearby Tasks"}
-              {activeTaskView === "created" && "My Created Tasks"}
               {activeTaskView === "pending" && "My Pending Tasks"}
               {activeTaskView === "history" && "My Work History"}
               <span className="ml-2 text-sm text-slate-500 font-normal">
-                ({activeTaskView === "nearby" ? sortedTasks.length : 
-                  activeTaskView === "created" ? myCreatedTasks.length : 
+                ({activeTaskView === "nearby" ? (sortedTasks.length + myCreatedTasks.length) : 
                   activeTaskView === "pending" ? myPendingTasks.length :
-                  myWorkHistory.length} {activeTaskView === "nearby" ? "available" : "tasks"})
+                  myWorkHistory.length} {activeTaskView === "nearby" ? "total" : "tasks"})
               </span>
             </h2>
             <div className="flex items-center gap-2">
@@ -1596,10 +1316,10 @@ export default function Dashboard() {
           </div>
 
           {/* Task Grid */}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {/* Loading State - only show if not in demo mode or no tasks yet */}
-            {isFetchingTasks && activeTaskView === "nearby" && !DEMO_MODE && (
-              <div className="col-span-full flex items-center justify-center py-12">
+          <div className="space-y-8">
+            {/* Loading State */}
+            {isFetchingTasks && activeTaskView === "nearby" && (
+              <div className="flex items-center justify-center py-12">
                 <div className="flex items-center gap-3 text-slate-400">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -1610,62 +1330,323 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Empty State - Nearby */}
-            {activeTaskView === "nearby" && !isFetchingTasks && sortedTasks.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-20 h-20 mb-4 rounded-full bg-slate-800/50 flex items-center justify-center">
-                  <span className="text-4xl">{userAddress ? "📋" : "🔐"}</span>
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-2">
-                  {userAddress ? "No Tasks Found" : "Connect Your Wallet"}
-                </h3>
-                <p className="text-slate-400 mb-4 max-w-md">
-                  {!userAddress 
-                    ? "Please connect your wallet to browse and accept tasks near you."
-                    : locationError 
-                    ? "Location access was denied. Please allow location access to find tasks near you."
-                    : "There are no tasks in your area yet. Be the first to post a task!"}
-                </p>
-                {userAddress ? (
-                  <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg shadow-indigo-500/30"
-                  >
-                    + Create First Task
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleDemoConnect}
-                    className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg shadow-indigo-500/30"
-                  >
-                    Connect Wallet
-                  </button>
+            {/* ===== NEARBY VIEW - Two Sections ===== */}
+            {activeTaskView === "nearby" && !isFetchingTasks && (
+              <>
+                {/* Section 1: Your Tasks (Created by current user) */}
+                {userAddress && myCreatedTasks.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <span className="text-xl">📝</span> Your Tasks
+                      <span className="ml-2 text-sm text-slate-500 font-normal">({myCreatedTasks.length})</span>
+                    </h3>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {myCreatedTasks.map((task) => (
+                        <div
+                          key={`created-${task.id}`}
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setIsTaskDetailOpen(true);
+                          }}
+                          className={`group relative p-5 rounded-2xl border backdrop-blur-md transition-all hover:scale-[1.02] cursor-pointer ${
+                            task.isBoosted
+                              ? "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/30 shadow-lg shadow-yellow-500/10"
+                              : "bg-slate-800/50 border-indigo-500/30 hover:border-indigo-500/50"
+                          }`}
+                        >
+                          {/* Boosted Badge */}
+                          {task.isBoosted && (
+                            <div className="absolute -top-2 -right-2 px-2 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full text-xs font-bold text-black shadow-lg">
+                              ⚡ BOOSTED
+                            </div>
+                          )}
+
+                          {/* Edit & Delete Icons - Only for open tasks */}
+                          {task.status === "open" && (
+                            <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
+                              {/* Edit Icon */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditModal(task);
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-all"
+                                title="Edit task"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                              </button>
+                              {/* Delete Icon */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDeleteConfirm(task);
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all"
+                                title="Delete task"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Your Task Badge */}
+                          <div className="absolute -top-2 -left-2 px-2 py-1 bg-indigo-500 rounded-full text-xs font-bold text-white shadow-lg">
+                            Your Task
+                          </div>
+
+                          {/* Category + Status Badges */}
+                          <div className="flex items-center gap-2 mb-3 flex-wrap mt-2">
+                            <span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs font-medium capitalize">
+                              {task.category.replace("_", " ")}
+                            </span>
+                            {/* Payment Status for in-progress tasks */}
+                            {task.status === "in_progress" && (
+                              <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-lg text-xs font-medium">
+                                🔒 {task.amount} VERY in Escrow
+                              </span>
+                            )}
+                            {/* Status Badge */}
+                            <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                              task.status === "open" 
+                                ? "bg-green-500/20 text-green-300" 
+                                : task.status === "in_progress" 
+                                ? "bg-blue-500/20 text-blue-300"
+                                : task.status === "submitted"
+                                ? "bg-yellow-500/20 text-yellow-300"
+                                : task.status === "completed"
+                                ? "bg-emerald-500/20 text-emerald-300"
+                                : "bg-red-500/20 text-red-300"
+                            }`}>
+                              {task.status === "open" && "🟢 Open"}
+                              {task.status === "in_progress" && "🔵 In Progress"}
+                              {task.status === "submitted" && "🟡 Pending Approval"}
+                              {task.status === "completed" && "✅ Completed"}
+                              {task.status === "disputed" && "🔴 Disputed"}
+                            </span>
+                          </div>
+
+                          {/* Title */}
+                          <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-indigo-300 transition-colors">
+                            {task.title}
+                          </h3>
+
+                          {/* Description */}
+                          <p className="text-sm text-slate-400 mb-4 line-clamp-2">
+                            {task.description}
+                          </p>
+
+                          {/* Worker info */}
+                          {task.worker && (
+                            <div className="mb-3 text-xs text-slate-500">
+                              👷 Worker: <span className="text-slate-300">{task.worker}</span>
+                            </div>
+                          )}
+
+                          {/* Footer */}
+                          <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                            {/* Payment */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl font-bold text-white">{task.amount}</span>
+                              <span className="text-sm text-indigo-400 font-medium">VERY</span>
+                            </div>
+
+                            {/* Actions - Manage buttons, NO accept button */}
+                            <div className="flex items-center gap-2">
+                              {/* Boost button */}
+                              {!task.isBoosted && task.status === "open" && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTask(task);
+                                    setIsBoostModalOpen(true);
+                                  }}
+                                  className="px-3 py-1.5 text-xs text-yellow-400 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/20 transition-all"
+                                >
+                                  ⚡ Boost
+                                </button>
+                              )}
+                              {/* View Details */}
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedTask(task);
+                                  setIsTaskDetailOpen(true);
+                                }}
+                                className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-all"
+                              >
+                                Manage
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </div>
+
+                {/* Section 2: Tasks Near You (From other users) */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <span className="text-xl">📍</span> Tasks Near You
+                    <span className="ml-2 text-sm text-slate-500 font-normal">
+                      ({sortedTasks.filter(t => !userAddress || t.posterAddress.toLowerCase() !== userAddress.toLowerCase()).length} available)
+                    </span>
+                  </h3>
+                  
+                  {/* Filter out user's own tasks from nearby */}
+                  {sortedTasks.filter(t => !userAddress || t.posterAddress.toLowerCase() !== userAddress.toLowerCase()).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-20 h-20 mb-4 rounded-full bg-slate-800/50 flex items-center justify-center">
+                        <span className="text-4xl">{userAddress ? "📋" : "🔐"}</span>
+                      </div>
+                      <h3 className="text-xl font-semibold text-white mb-2">
+                        {userAddress ? "No Tasks Available" : "Connect Your Wallet"}
+                      </h3>
+                      <p className="text-slate-400 mb-4 max-w-md">
+                        {!userAddress 
+                          ? "Please connect your wallet to browse and accept tasks near you."
+                          : locationError 
+                          ? "Location access was denied. Please allow location access to find tasks near you."
+                          : "There are no tasks from other users in your area yet. Check back later!"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {sortedTasks
+                        .filter(t => !userAddress || t.posterAddress.toLowerCase() !== userAddress.toLowerCase())
+                        .map((task) => (
+                        <div
+                          key={`nearby-${task.id}`}
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setIsTaskDetailOpen(true);
+                          }}
+                          className={`group relative p-5 rounded-2xl border backdrop-blur-md transition-all hover:scale-[1.02] cursor-pointer ${
+                            task.isBoosted
+                              ? "bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/30 shadow-lg shadow-yellow-500/10"
+                              : "bg-slate-800/50 border-white/10 hover:border-indigo-500/30"
+                          }`}
+                        >
+                          {/* Boosted Badge */}
+                          {task.isBoosted && (
+                            <div className="absolute -top-2 -right-2 px-2 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full text-xs font-bold text-black shadow-lg">
+                              ⚡ BOOSTED
+                            </div>
+                          )}
+
+                          {/* Category + Status Badges */}
+                          <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            <span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs font-medium capitalize">
+                              {task.category.replace("_", " ")}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {task.distance < 1000 
+                                ? `${task.distance}m away` 
+                                : `${(task.distance / 1000).toFixed(1)}km away`}
+                            </span>
+                            {/* Escrow Badge for in-progress tasks */}
+                            {task.status === "in_progress" && (
+                              <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-lg text-xs font-medium">
+                                🔒 {task.amount} VERY in Escrow
+                              </span>
+                            )}
+                            {/* Status Badge */}
+                            <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                              task.status === "open" 
+                                ? "bg-green-500/20 text-green-300" 
+                                : task.status === "in_progress" 
+                                ? "bg-blue-500/20 text-blue-300"
+                                : task.status === "submitted"
+                                ? "bg-yellow-500/20 text-yellow-300"
+                                : task.status === "completed"
+                                ? "bg-emerald-500/20 text-emerald-300"
+                                : "bg-red-500/20 text-red-300"
+                            }`}>
+                              {task.status === "open" && "🟢 Open"}
+                              {task.status === "in_progress" && "🔵 In Progress"}
+                              {task.status === "submitted" && "🟡 Pending Approval"}
+                              {task.status === "completed" && "✅ Completed"}
+                              {task.status === "disputed" && "🔴 Disputed"}
+                            </span>
+                          </div>
+
+                          {/* Title */}
+                          <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-indigo-300 transition-colors">
+                            {task.title}
+                          </h3>
+
+                          {/* Description */}
+                          <p className="text-sm text-slate-400 mb-4 line-clamp-2">
+                            {task.description}
+                          </p>
+
+                          {/* Poster info */}
+                          <div className="mb-3 text-xs text-slate-500">
+                            👤 Posted by: <span className="text-slate-300">{task.poster}</span>
+                          </div>
+
+                          {/* Footer */}
+                          <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                            {/* Payment */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl font-bold text-white">{task.amount}</span>
+                              <span className="text-sm text-indigo-400 font-medium">VERY</span>
+                            </div>
+
+                            {/* Actions - Accept button for tasks from other users */}
+                            <div className="flex items-center gap-2">
+                              {task.status === "open" && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAcceptTask(task);
+                                  }}
+                                  className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-all"
+                                >
+                                  Accept Task
+                                </button>
+                              )}
+                              {task.status !== "open" && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTask(task);
+                                    setIsTaskDetailOpen(true);
+                                  }}
+                                  className="px-4 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-sm font-medium rounded-lg transition-all"
+                                >
+                                  View Details
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Empty state when no tasks at all and not connected */}
+                {!userAddress && sortedTasks.length === 0 && myCreatedTasks.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-20 h-20 mb-4 rounded-full bg-slate-800/50 flex items-center justify-center">
+                      <span className="text-4xl">🔐</span>
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">Connect Your Wallet</h3>
+                    <p className="text-slate-400 mb-4 max-w-md">
+                      Please connect your wallet to browse and accept tasks near you.
+                    </p>
+                    <p className="text-sm text-slate-500">Use the Connect Wallet button in the header to get started.</p>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Empty State - Created Tasks */}
-            {activeTaskView === "created" && myCreatedTasks.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-20 h-20 mb-4 rounded-full bg-slate-800/50 flex items-center justify-center">
-                  <span className="text-4xl">📝</span>
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-2">No Tasks Created</h3>
-                <p className="text-slate-400 mb-4 max-w-md">
-                  {userAddress 
-                    ? "You haven't created any tasks yet. Post your first task to get help!"
-                    : "Connect your wallet to view your created tasks."}
-                </p>
-                {userAddress && (
-                  <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg shadow-indigo-500/30"
-                  >
-                    + Create Your First Task
-                  </button>
-                )}
-              </div>
-            )}
+            {/* ===== OTHER VIEWS (Pending, History) ===== */}
 
             {/* Empty State - Work History */}
             {activeTaskView === "history" && myWorkHistory.length === 0 && (
@@ -1713,11 +1694,8 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Task Cards - Render based on active view */}
-            {(activeTaskView === "nearby" ? sortedTasks : 
-              activeTaskView === "created" ? myCreatedTasks : 
-              activeTaskView === "pending" ? myPendingTasks :
-              myWorkHistory).map((task) => (
+            {/* Task Cards - Render for Pending and History views */}
+            {activeTaskView !== "nearby" && (activeTaskView === "pending" ? myPendingTasks : myWorkHistory).map((task) => (
               <div
                 key={task.id}
                 onClick={() => {
@@ -1742,13 +1720,6 @@ export default function Dashboard() {
                   <span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs font-medium capitalize">
                     {task.category.replace("_", " ")}
                   </span>
-                  {activeTaskView === "nearby" && (
-                    <span className="text-xs text-slate-500">
-                      {task.distance < 1000 
-                        ? `${task.distance}m away` 
-                        : `${(task.distance / 1000).toFixed(1)}km away`}
-                    </span>
-                  )}
                   {/* Status Badge */}
                   <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
                     task.status === "open" 
@@ -1767,8 +1738,8 @@ export default function Dashboard() {
                     {task.status === "completed" && "✅ Completed"}
                     {task.status === "disputed" && "🔴 Disputed"}
                   </span>
-                  {/* Payment Status Badge for created/pending/history views */}
-                  {(activeTaskView === "created" || activeTaskView === "pending" || activeTaskView === "history") && task.status !== "open" && (
+                  {/* Payment Status Badge for pending/history views */}
+                  {(activeTaskView === "pending" || activeTaskView === "history") && task.status !== "open" && (
                     <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
                       task.paymentStatus === "released" 
                         ? "bg-green-500/20 text-green-300" 
@@ -1796,13 +1767,6 @@ export default function Dashboard() {
                   {task.description}
                 </p>
 
-                {/* Worker info for created tasks */}
-                {activeTaskView === "created" && task.worker && (
-                  <div className="mb-3 text-xs text-slate-500">
-                    👷 Worker: <span className="text-slate-300">{task.worker}</span>
-                  </div>
-                )}
-
                 {/* Poster info for work history and pending tasks */}
                 {(activeTaskView === "history" || activeTaskView === "pending") && (
                   <div className="mb-3 text-xs text-slate-500">
@@ -1820,31 +1784,6 @@ export default function Dashboard() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    {/* Boost button - only for tasks created by user */}
-                    {activeTaskView === "created" && !task.isBoosted && task.status === "open" && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTask(task);
-                          setIsBoostModalOpen(true);
-                        }}
-                        className="px-3 py-1.5 text-xs text-yellow-400 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/20 transition-all"
-                      >
-                        ⚡ Boost
-                      </button>
-                    )}
-                    {/* Nearby tasks - Accept button */}
-                    {activeTaskView === "nearby" && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAcceptTask(task);
-                        }}
-                        className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-all"
-                      >
-                        Accept
-                      </button>
-                    )}
                     {/* Pending tasks - Cancel button */}
                     {activeTaskView === "pending" && task.status === "in_progress" && (
                       <button 
@@ -1857,19 +1796,17 @@ export default function Dashboard() {
                         Cancel Task
                       </button>
                     )}
-                    {/* View Details button for created/pending/history */}
-                    {(activeTaskView === "created" || activeTaskView === "pending" || activeTaskView === "history") && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTask(task);
-                          setIsTaskDetailOpen(true);
-                        }}
-                        className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-all"
-                      >
-                        View Details
-                      </button>
-                    )}
+                    {/* View Details button for pending/history */}
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTask(task);
+                        setIsTaskDetailOpen(true);
+                      }}
+                      className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-all"
+                    >
+                      View Details
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1986,6 +1923,160 @@ export default function Dashboard() {
                 className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 transition-all disabled:cursor-not-allowed"
               >
                 {isLoading ? "Creating..." : `Create Task (${createForm.amount || "0"} VERY)`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================== */}
+      {/* Edit Task Modal */}
+      {/* ======================================== */}
+      {isEditModalOpen && selectedTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+              <h2 className="text-xl font-semibold text-white">✏️ Edit Task</h2>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Task Title *
+                </label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  placeholder="e.g., Walk my dog for 30 minutes"
+                  className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="Provide more details about the task..."
+                  rows={3}
+                  className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Category
+                </label>
+                <select
+                  value={editForm.category}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  {CATEGORIES.filter(c => c.id !== "all").map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Amount (read-only) */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Payment Amount
+                </label>
+                <div className="px-4 py-3 bg-slate-800/50 border border-white/10 rounded-xl text-slate-400">
+                  {selectedTask.amount} VERY <span className="text-xs">(cannot be changed)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/10 bg-slate-800/30">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-5 py-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditTask}
+                disabled={isLoading || !editForm.title}
+                className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 transition-all disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================== */}
+      {/* Delete Confirmation Modal */}
+      {/* ======================================== */}
+      {isDeleteConfirmOpen && selectedTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-slate-900 border border-red-500/30 rounded-2xl shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-red-500/10">
+              <h2 className="text-xl font-semibold text-white">🗑️ Delete Task</h2>
+              <button
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-red-500/20 rounded-full">
+                  <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Are you sure?</h3>
+                  <p className="text-slate-400 text-sm">
+                    This will permanently delete <span className="text-white font-medium">"{selectedTask.title}"</span> and refund the escrowed amount back to your wallet. This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/10 bg-slate-800/30">
+              <button
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className="px-5 py-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteTask}
+                disabled={isLoading}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-slate-600 text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 transition-all disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Deleting..." : "Delete Task"}
               </button>
             </div>
           </div>

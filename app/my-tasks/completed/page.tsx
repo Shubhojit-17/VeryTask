@@ -8,10 +8,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 
-// Demo mode flag - should match main page
-const DEMO_MODE = true;
-const DEMO_WALLET_ADDRESS = "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD73";
-
 interface Task {
   id: number;
   title: string;
@@ -23,154 +19,6 @@ interface Task {
   created_at: string;
   completed_at: string | null;
 }
-
-// Demo work history data (tasks where user is the worker)
-const DEMO_WORK_HISTORY: Task[] = [
-  {
-    id: 6,
-    title: "Mow lawn and trim hedges",
-    description: "Need lawn mowed and hedges trimmed for my front and back yard. Equipment provided.",
-    amount: "75",
-    category: "yard_work",
-    status: "completed",
-    poster_address: "0x7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8b5a4",
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 7,
-    title: "Deliver birthday cake",
-    description: "Pick up a custom birthday cake from Sweet Dreams Bakery and deliver to a birthday party venue.",
-    amount: "20",
-    category: "delivery",
-    status: "completed",
-    poster_address: "0x4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5f2e1",
-    created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 8,
-    title: "Assemble IKEA furniture",
-    description: "Assemble a PAX wardrobe and MALM dresser. All parts and tools provided.",
-    amount: "85",
-    category: "handyman",
-    status: "completed",
-    poster_address: "0x2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3g4f3",
-    created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 9,
-    title: "Walk 3 dogs for a week",
-    description: "Daily dog walking service for 3 small dogs while owner is on vacation.",
-    amount: "150",
-    category: "pet_care",
-    status: "completed",
-    poster_address: "0x6h5g4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7i8j7",
-    created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 10,
-    title: "Post-party cleanup",
-    description: "Clean up after a house party. General cleaning, trash removal, dishes.",
-    amount: "60",
-    category: "cleaning",
-    status: "completed",
-    poster_address: "0x8k7j6i5h4g3f2e1d0c9b8a7f6e5d4c3b2a1f0e9l0m9",
-    created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 11,
-    title: "Grocery shopping for elderly neighbor",
-    description: "Weekly grocery shopping for an elderly neighbor. List provided, about 20 items.",
-    amount: "30",
-    category: "errands",
-    status: "completed",
-    poster_address: "0x0n9m8l7k6j5i4h3g2f1e0d9c8b7a6f5e4d3c2b1p2q1",
-    created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 12,
-    title: "Paint garden fence",
-    description: "Paint a 50ft wooden garden fence. Paint and brushes provided.",
-    amount: "100",
-    category: "yard_work",
-    status: "completed",
-    poster_address: "0x2r1q0p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4t4s3",
-    created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 13,
-    title: "Airport pickup",
-    description: "Pick up a guest from JFK airport and drive to Manhattan hotel.",
-    amount: "45",
-    category: "delivery",
-    status: "completed",
-    poster_address: "0x4u3t2s1r0q9p8o7n6m5l4k3j2i1h0g9f8e7d6v6w5",
-    created_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 14,
-    title: "Install ceiling fan",
-    description: "Replace old light fixture with a new ceiling fan. Fan purchased, just need installation.",
-    amount: "70",
-    category: "handyman",
-    status: "completed",
-    poster_address: "0x6x5w4v3u2t1s0r9q8p7o6n5m4l3k2j1i0h9g8y8z7",
-    created_at: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 15,
-    title: "Pet sit for weekend",
-    description: "Look after 2 cats and a hamster for the weekend. Feeding, litter, and some playtime.",
-    amount: "80",
-    category: "pet_care",
-    status: "completed",
-    poster_address: "0x8a7z6y5x4w3v2u1t0s9r8q7p6o5n4m3l2k1j0b0c9",
-    created_at: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 19 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 16,
-    title: "Office deep clean",
-    description: "Deep clean a small home office. Desk, shelves, windows, carpet vacuuming.",
-    amount: "40",
-    category: "cleaning",
-    status: "completed",
-    poster_address: "0x0d9c8b7a6z5y4x3w2v1u0t9s8r7q6p5o4n3m2e2f1",
-    created_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 17,
-    title: "Return online orders",
-    description: "Return 5 packages to various locations (UPS, FedEx, USPS). All labels printed.",
-    amount: "25",
-    category: "errands",
-    status: "completed",
-    poster_address: "0x2g1f0e9d8c7b6a5z4y3x2w1v0u9t8s7r6q5p4h4i3",
-    created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  // In-progress task
-  {
-    id: 4,
-    title: "Deep clean 2BR apartment",
-    description: "Moving out next week and need a thorough deep cleaning of my 2-bedroom apartment.",
-    amount: "120",
-    category: "cleaning",
-    status: "in_progress",
-    poster_address: "0x5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6a3b2",
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    completed_at: null,
-  },
-];
 
 export default function MyCompletedTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -189,23 +37,6 @@ export default function MyCompletedTasks() {
   // Fetch tasks completed by user
   const fetchMyTasks = useCallback(async () => {
     if (!userAddress) {
-      setLoading(false);
-      return;
-    }
-
-    // Demo mode: use demo data
-    if (DEMO_MODE) {
-      setTasks(DEMO_WORK_HISTORY);
-      const completedTasks = DEMO_WORK_HISTORY.filter(t => t.status === "completed");
-      const inProgressTasks = DEMO_WORK_HISTORY.filter(t => t.status === "in_progress");
-      const awaitingTasks = DEMO_WORK_HISTORY.filter(t => t.status === "submitted");
-      const totalEarnings = completedTasks.reduce((sum, t) => sum + parseFloat(t.amount || "0"), 0);
-      setStats({
-        completed: completedTasks.length,
-        earnings: totalEarnings,
-        inProgress: inProgressTasks.length,
-        awaiting: awaitingTasks.length,
-      });
       setLoading(false);
       return;
     }
